@@ -477,7 +477,13 @@ public class DocMaker {
                     buf.append("Required input");
                     break;
                 case XOR:
-                    buf.append("Either this, or " + input.getOther().getName() + " needs to be specified");
+                    buf.append("Either this, or one of ");
+                    int ruleSize = input.getOthers().size();
+                    for (int i = 0; i < ruleSize - 1; i++) {
+                        buf.append(input.getOthers().get(i).getName() + ", ");
+                    }
+                    buf.append(input.getOthers().get(ruleSize - 1).getName());
+                    buf.append(" needs to be specified");
                     break;
                 case FORBIDDEN:
                     buf.append("Forbidden: must not be specified");

@@ -31,6 +31,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -79,7 +80,8 @@ public class Input<T> {
     /**
      * used only if validation rule is XOR *
      */
-    Input<?> other;
+    List<Input<?>> others = new ArrayList<Input<?>>();
+
     public T defaultValue;
     /**
      * Possible values for enumerations, e.g. if
@@ -139,11 +141,7 @@ public class Input<T> {
         if (rule != Validate.XOR) {
             Log.err.println("Programmer error: input rule should be XOR for this Input constructor");
         }
-        this.rule = rule;
-        this.other = other;
-        this.other.other = this;
-        this.other.rule = rule;
-        checkName();
+        addXORRulesToInput(rule, other);
     } // c'tor
 
     /**
@@ -205,11 +203,22 @@ public class Input<T> {
         if (rule != Validate.XOR) {
             Log.err.println("Programmer error: input rule should be XOR for this Input constructor");
         }
-        this.rule = rule;
-        this.other = other;
-        this.other.other = this;
-        this.other.rule = rule;
+        addXORRulesToInput(rule, other);
     } // c'tor
+
+    private void addXORRulesToInput(Validate rule, Input<?> other) {
+        this.rule = rule;
+        this.others.add(other);
+        other.rule = rule;
+        if (other.others.size() != 0) {
+            this.others.addAll(other.others);
+            for (int i = 0; i < other.others.size(); i++) {
+                other.others.get(i).others.add(this);
+            }
+        }
+        other.others.add(this);
+    }
+
 
     /**
      * constructor for XOR rules, with type pre-specified
@@ -308,8 +317,8 @@ public class Input<T> {
         this.rule = rule;
     }
 
-    final public Input<?> getOther() {
-        return other;
+    final public List<Input<?>> getOthers() {
+        return others;
     }
 
     /**
@@ -726,14 +735,22 @@ public class Input<T> {
                 }
                 break;
             case XOR:
-                if (get() == null) {
-                    if (other.get() == null) {
-                        throw new IllegalArgumentException("Either input '" + getName() + "' or '" + other.getName() + "' needs to be specified");
+                System.out.println("Why the hell am I here " + getName());
+                int rule_count = 0;
+                String tmp = getName();
+                if (get() != null) {
+                    rule_count++;
+                }
+                for (int i = 0; i < others.size(); i++) {
+                    if (others.get(i).get() != null) {
+                        rule_count++;
                     }
-                } else {
-                    if (other.get() != null) {
-                        throw new IllegalArgumentException("Only one of input '" + getName() + "' and '" + other.getName() + "' must be specified (not both)");
-                    }
+                    tmp += ", " + others.get(i).getName();
+                }
+                if (rule_count == 0) {
+                    throw new IllegalArgumentException("At least one input of " + tmp + " needs to be specified.");
+                } else if (rule_count > 1) {
+                    throw new IllegalArgumentException("Only one of inputs " + tmp + " must be specified.");
                 }
                 // noting to do
                 break;
